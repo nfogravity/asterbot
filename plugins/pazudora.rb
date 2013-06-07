@@ -4,6 +4,7 @@ require 'pry'
 require 'open-uri'
 require 'calc'
 require 'distribution'
+require 'gist'
 
 class Pazudora
   include Cinch::Plugin
@@ -81,6 +82,7 @@ Aliases: skill, cdf, bino, binomial"
       "fc" => "who",
       "delete" => "remove",
       "dex" => "lookup",
+      "info" => "lookup",
       "evolve" => "evolution",
       "materials" => "evolution",
       "mats" => "evolution",
@@ -92,9 +94,8 @@ Aliases: skill, cdf, bino, binomial"
       "stam" => "stamina",
       "math" => "calc",
       "skill" => "skillup",
-      "cdf" => "skillup",
-      "bino" => "skillup",
-      "binomial" => "skillup"
+      "cdf" => "binomial",
+      "bino" => "binomial",
   }
 
   def initialize(*args)
@@ -166,6 +167,34 @@ Aliases: skill, cdf, bino, binomial"
       screwed = Distribution::Binomial::cdf(k-1, n, p)
       ok = (1.0 - screwed).round(3)
       m.reply("On #{n} feeds (p=#{p}), your odds of getting #{k} or more skillups is #{ok}.")
+    rescue ArgumentError => e
+      m.reply("Bad query: #{e.message}") 
+    end 
+  end
+
+  #kill me
+  def pazudora_binomial(m, args)
+    argv = args.split(" ")
+    if argv.length == 3
+      k = argv[0].to_i
+      n = argv[1].to_i
+      p = argv[2].to_f
+    elsif argv.length == 2
+      k = argv[0].to_i
+      n = argv[1].to_i
+      p = 0.2
+    else
+      m.reply ("USAGE: !pad skillup K N p") and return
+    end
+
+    if k == 0
+      m.reply ("Your odds of getting 0 or more successes is 1, doofus.") and return
+    end
+
+    begin
+      screwed = Distribution::Binomial::cdf(k-1, n, p)
+      ok = (1.0 - screwed).round(3)
+      m.reply("On #{n} trials (p=#{p}), your odds of getting #{k} or more successes is #{ok}.")
     rescue ArgumentError => e
       m.reply("Bad query: #{e.message}") 
     end 
@@ -284,6 +313,24 @@ Aliases: skill, cdf, bino, binomial"
     pdx = PazudoraData.instance.get_puzzlemon(identifier)
     m.reply "Could not find puzzlemon #{identifier}" and return if pdx.nil?
     m.reply pdx.lookup_output
+  end
+
+  def pazudora_shortdungeon(m, args)
+    identifier = args
+    output = PazudoraData.instance.get_dungeon(identifier)
+    m.reply "Could not find dungeon #{identifier}" and return if output.nil?
+    m.reply output.split("\n").first
+  end
+
+  def pazudora_dungeon(m, args)
+    identifier = args
+    output = PazudoraData.instance.get_dungeon(identifier)
+    m.reply "Could not find dungeon #{identifier}" and return if output.nil?
+    m.reply "Found data on #{identifier}, uploading to Gist..."
+    gist = Gist.gist(output, :filename => "dungeon_data.txt")
+    url = gist["files"].first.last["raw_url"]
+    size = gist["files"].first.last["size"] 
+    m.reply("#{size} bytes of dungeon data uploaded to #{url}")
   end
 
   def pazudora_chain(m, args)

@@ -13,10 +13,20 @@ class PazudoraData
     @monster_data = JSON.parse(File.read("db/scraped_monsters.json"))
     @exp_data = JSON.parse(File.read("db/scraped_xp_curves.json"))
     @rem_data = JSON.parse(File.read("db/tags.json"))
+    @dungeon_data = JSON.parse(File.read("db/scraped_dungeons.json"))
     @name_map = {}
     @monster_data.each do |id, data|
       @name_map[data["name"].downcase] = id
     end
+  end
+
+  def get_dungeon(identifier)
+    match = substring_search(identifier, @dungeon_data)
+    if match.nil?
+      match = edit_distance_search(identifier, @dungeon_data)
+      return nil if match.nil?
+    end
+    match
   end
 
   def get_puzzlemon(identifier)
@@ -24,9 +34,9 @@ class PazudoraData
       id = identifier.to_i
       Puzzlemon.new(id, @monster_data[id.to_s])
     else
-      match = substring_search(identifier)
+      match = substring_search(identifier, @name_map)
       if match.nil?
-        id = edit_distance_search(identifier)
+        id = edit_distance_search(identifier, @name_map)
         return nil if id.nil?
         Puzzlemon.new(id, @monster_data[id.to_s])
       else
@@ -35,19 +45,21 @@ class PazudoraData
     end
   end
 
-  def substring_search(identifier)
-    names = @name_map.keys
+  def substring_search(identifier, map)
+    names = map.keys
     matches = names.select{|x| x.include?(identifier.downcase) }
     return nil if matches.empty?
     choice = matches[matches.map{|current| Levenshtein.distance(identifier.downcase, current)}.each_with_index.min.last]
-    @name_map[choice]
+    map[choice]
   end
 
-  def edit_distance_search(identifier)
-    names = @name_map.keys
+  def edit_distance_search(identifier, map)
+    limit = (identifier.length) / 3
+    limit = 3 if limit < 3
+    names = map.keys
     choice = names[names.map{|current| Levenshtein.distance(identifier.downcase, current)}.each_with_index.min.last]
-    return nil if Levenshtein.distance(identifier.downcase, choice) > 3
-    @name_map[choice]
+    return nil if Levenshtein.distance(identifier.downcase, choice) > limit
+    map[choice]
   end
 
   def gachapon(tags=[])
