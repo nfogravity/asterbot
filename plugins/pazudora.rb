@@ -5,6 +5,7 @@ require 'open-uri'
 require 'calc'
 require 'distribution'
 require 'gist'
+require 'yaml'
 
 class Pazudora
   include Cinch::Plugin
