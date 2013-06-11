@@ -6,6 +6,7 @@ require 'calc'
 require 'distribution'
 require 'gist'
 require 'yaml'
+require 'bitly'
 
 class Pazudora
   include Cinch::Plugin
@@ -326,12 +327,19 @@ Aliases: skill, cdf, bino, binomial"
   def pazudora_dungeon(m, args)
     identifier = args
     output = PazudoraData.instance.get_dungeon(identifier)
-    m.reply "Could not find dungeon #{identifier}" and return if output.nil?
-    m.reply "Found data on #{identifier}, uploading to Gist..."
-    gist = Gist.gist(output, :filename => "dungeon_data.txt")
-    url = gist["files"].first.last["raw_url"]
-    size = gist["files"].first.last["size"] 
-    m.reply("#{size} bytes of dungeon data uploaded to #{url}")
+    if output.split("\n").length > 4
+      m.reply "Could not find dungeon #{identifier}" and return if output.nil?
+      m.reply "Found data on #{identifier}, uploading to Gist..."
+      gist = Gist.gist(output, :filename => "dungeon_data.txt")
+      url = gist["files"].first.last["raw_url"]
+      size = gist["files"].first.last["size"] 
+
+      bitly = Bitly.new("asterismsa", "R_b02766a585a99ba34687db69d5ab1ddf")
+      u = bitly.shorten(url)
+      m.reply("#{size} bytes of dungeon data uploaded to #{u.short_url}")
+    else
+      m.reply(output)
+    end
   end
 
   def pazudora_chain(m, args)
