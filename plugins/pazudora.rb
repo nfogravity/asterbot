@@ -103,6 +103,8 @@ Aliases: skill, cdf, bino, binomial"
   def initialize(*args)
     super
     @pddata = config[:pddata]
+    @alarms = []
+    @clock = nil
   end
 
   #Any public method named pazudora_[something] is external and
@@ -132,6 +134,62 @@ Aliases: skill, cdf, bino, binomial"
       m.reply "Unknown subcommand #{args}" and return unless helpstr
       m.reply helpstr
     end
+  end
+
+  def pazudora_clockup(m, args)
+    #laffo
+    return unless m.user.nick.include?("Asterism") 
+    if @clock
+      m.reply "Run only one clock, you moron."
+      return
+    end
+    m.reply "Spinning up clock process at #{Time.now}"
+
+    @clock = true
+    while true
+      sleep 10
+      p "resolving alarms: #{@alarms}"
+      reap = []
+      @alarms.each do |alarm|
+        delta = Time.now - alarm[:time]
+        next unless delta > 0 && delta < 60
+        reap << alarm
+        alarm_message = "#{alarm[:user]}: alarm #{alarm[:text]} has fired!"
+        Channel(alarm[:channel]).send(alarm_message)
+      end
+      @alarms = @alarms.delete_if {|alarm| reap.include?(alarm)}
+    end
+  end
+
+  def pazudora_alarm(m, args)
+    if m.channel.nil?
+      m.reply "For Reasons(TM), asterbot does not allow alarm activation over PM."
+      return
+    end
+
+    argv = args.split(" ")
+    if argv.last.match(/(\+|\-)\d+/)
+      timezone = argv.pop
+      offset = timezone.to_i
+      offset = offset * -1 if offset < 0
+      if offset > 0 && offset < 10
+        offset = "0#{offset}"
+      elsif offset >= 24
+        m.reply "Invalid UTC offset #{offset}" and return
+      else
+        offset = offset.to_s
+      end
+      utc = "#{timezone[0,1]}#{offset}:00"
+    else
+      utc = "-07:00"
+    end
+
+    given_time = argv.last
+    text = (argv.length == 1) ? "(generic)" : argv[0..-2].join(" ")
+    target_time = DateTime.strptime(given_time + utc, "%H:%M%z").to_time
+    @alarms << {:time => target_time, :text => text, :channel => m.channel.name, :user => m.user.nick}
+    m.reply "Alarm set for " + target_time.strftime("%I:%M%p UTC") + utc
+    p @alarms
   end
 
   def pazudora_calc(m, args)
