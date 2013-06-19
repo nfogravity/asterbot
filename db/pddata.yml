@@ -75,10 +75,6 @@ keht:
   :friend_code: '309,757,211'
   :added_by: keht
   :updated_at: !ruby/object:DateTime 2013-05-21 11:55:52.001088060 -07:00
-help:
-  :friend_code: 
-  :added_by: jarch3r
-  :updated_at: !ruby/object:DateTime 2013-05-22 23:39:37.379894227 -07:00
 jarch3r:
   :friend_code: '393,147,283'
   :added_by: jarch3r
@@ -111,3 +107,23 @@ wesdotcool:
   :friend_code: '325,635,299'
   :added_by: wesdotcool
   :updated_at: !ruby/object:DateTime 2013-06-03 18:06:50.985763161 -07:00
+steggybot:
+  :friend_code: '123,456,789'
+  :added_by: sahn
+  :updated_at: !ruby/object:DateTime 2013-06-12 12:12:09.343575797 -07:00
+jenny:
+  :friend_code: 008,675,309
+  :added_by: delfin
+  :updated_at: !ruby/object:DateTime 2013-06-12 12:12:34.738918618 -07:00
+floppydisk:
+  :friend_code: '316,340,249'
+  :added_by: floppydisk
+  :updated_at: !ruby/object:DateTime 2013-06-13 20:49:52.299553504 -07:00
+adar:
+  :friend_code: '310,542,259'
+  :added_by: adar1
+  :updated_at: !ruby/object:DateTime 2013-06-15 09:21:40.930410969 -07:00
+darkfact:
+  :friend_code: '123,456,789'
+  :added_by: jarch3r
+  :updated_at: !ruby/object:DateTime 2013-06-17 19:32:02.716735006 -07:00

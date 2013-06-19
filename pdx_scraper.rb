@@ -231,9 +231,27 @@ def exp_curve(pdx)
   out
 end
 
-def scrape_monsters
+def build_monster_book()
+  collector = scrape_monsters((1..PDX_MONSTER_COUNT))
+  f = File.open("scraped_monsters.json", "w")
+  f.write(collector.to_json)
+  f.close 
+end
+
+def add_monster_book(from, to)
+  collector = scrape_monsters((from..to))
+  old_file = File.open("db/scraped_monsters.json", "r")
+  old_book = JSON.parse(old_file.read)
+  binding.pry
+  new_book = old_book.merge(collector)
+  f = File.open("scraped_monsters_new.json", "w")
+  f.write(new_book.to_json)
+  f.close 
+end
+
+def scrape_monsters(iter)
   collector = {}
-  (1..PDX_MONSTER_COUNT).step do |n|
+  iter.step do |n|
     begin
       pdx = Puzzlemon.new(n.to_s)
       next unless pdx.valid?
@@ -282,13 +300,12 @@ def scrape_monsters
       p "Scraped no.#{n} #{name}"
       sleep(0.1)
     rescue Exception => e
-      binding.pry
+      p e
+      p e.backtrace
     end
   end
 
-  f = File.open("scraped_monsters.json", "w")
-  f.write(collector.to_json)
-  f.close
+  collector
 end
 
 def scrape_xp_page(uri)
@@ -368,4 +385,4 @@ def scrape_dungeon(doc, n)
   [dungeon_name, ([header] + boss_data).join("\n")]
 end
 
-scrape_dungeons 
+binding.pry
