@@ -157,10 +157,13 @@ Aliases: skill, cdf, bino, binomial"
     end
     m.reply "Spinning up clock process at #{Time.now}"
 
+    dailies = enqueue_dailies(m.channel.name)
+    m.reply "Auto-enqueued #{dailies} daily dungeons successfully." 
+
     @clock = true
+    today = Time.now.day
     while true
       sleep 10
-      p "resolving alarms: #{@alarms}"
       reap = []
       @alarms.each do |alarm|
         delta = Time.now - alarm[:time]
@@ -170,6 +173,13 @@ Aliases: skill, cdf, bino, binomial"
         Channel(alarm[:channel]).send(alarm_message)
       end
       @alarms = @alarms.delete_if {|alarm| reap.include?(alarm)}
+
+      if Time.now.hour == 0 && Time.now.day != today
+        @alarms.delete_if {|alarm| alarm[:text] == "Hourly dungeon"}
+        dailies = enqueue_dailies(m.channel.name)
+        m.reply "It's after midnight--auto-enqueued #{dailies} daily dungeons again."
+        today = Time.now.day
+      end
     end
   end
 
@@ -372,12 +382,53 @@ Aliases: skill, cdf, bino, binomial"
     m.reply "Dungeons today are: #{rewards.join(', ')}"
 
     (0..4).each do |i|
-      m.reply "Group #{(i + 65).chr}: #{event_data[i].text}, #{event_data[i + 5].text}, #{event_data[i + 10].text}"
+      group_line = ["Group #{(i + 65).chr}:"]
+      frame = 0
+      loop do
+        break if event_data[i + frame].nil?
+        time = "#{event_data[i + frame].text}".ljust(5)
+        group_line << time
+        frame += 5
+      end
+      m.reply group_line.join(" ")
     end
 
     if group_num
       m.reply "User #{username} is in group #{(group_num + 65).chr}"
     end
+  end
+
+  def enqueue_dailies(channel)
+    daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
+
+    unless @daily_timestamp == Time.now.strftime("%m-%d-%y")
+      @daily_page = nil
+      @daily_timestamp = Time.now.strftime("%m-%d-%y")
+    end
+
+    @daily_page ||= Nokogiri::HTML(open(daily_url))
+    event_data = @daily_page.css(".event3")
+    event_rewards = @daily_page.css(".limiteddragon")
+    rewards = parse_daily_dungeon_rewards(event_rewards)
+    count = 0
+
+    (0..4).each do |i|
+      group = "Group #{(i + 65).chr}"
+      times = []
+      frame = 0
+      loop do
+        break if event_data[i + frame].nil?
+        hour,am_pm = event_data[i + frame].text.split
+        hour = hour.to_i + (am_pm == "pm" ? 12 : 0)
+        t = DateTime.strptime("#{hour}:00-7:00", "%H:%M%z").to_time
+        p "enqueuing #{group} to #{channel} at #{t}"
+        @alarms << {:time => t, :text => rewards.first, :channel => channel, :user => group}
+        count += 1
+        frame += 5
+      end
+    end
+
+    count
   end
 
   def pazudora_lookup(m, args)
@@ -433,7 +484,7 @@ Aliases: skill, cdf, bino, binomial"
     identifier = args
     pdx = PazudoraData.instance.get_puzzlemon(identifier)
     m.reply "Could not find puzzlemon #{identifier}" and return if pdx.nil?
-    m.reply pdx.mats_output
+    m.reply pdx.mats_output.gsub("\n", ", ").gsub(":,",":").gsub(/No.\d+ /, "")
   end
 
   def pazudora_experience(m, args)

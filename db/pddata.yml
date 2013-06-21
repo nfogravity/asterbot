@@ -75,10 +75,6 @@ keht:
   :friend_code: '309,757,211'
   :added_by: keht
   :updated_at: !ruby/object:DateTime 2013-05-21 11:55:52.001088060 -07:00
-help:
-  :friend_code: 
-  :added_by: jarch3r
-  :updated_at: !ruby/object:DateTime 2013-05-22 23:39:37.379894227 -07:00
 jarch3r:
   :friend_code: '393,147,283'
   :added_by: jarch3r
