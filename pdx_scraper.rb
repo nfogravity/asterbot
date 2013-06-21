@@ -315,7 +315,19 @@ def scrape_xp()
 end
 
 def scrape_dungeonsets()
-
+  base = "http://www.puzzledragonx.com/en/dungeon.asp?d="
+  collector = {}
+  (1..150).step do |n|
+    doc = Nokogiri::HTML.parse(open(base + n.to_s).read)
+    next if doc.to_s.include?("Meteor Volcano Dragon is a fire element monster")
+    header = doc.to_s.scan(/<h1>(.+)<\/h1>/).first.first
+    dungeons = doc.to_s.scan(/<a href="mission.asp\?m=(\d+)">(.+)<\/a>/)
+    collector[header] = dungeons
+    p "Scraped #{header}"
+  end
+  f = File.open("scraped_dungeonsets.json", "w")
+  f.write(collector.to_json)
+  f.close
 end
 
 def scrape_dungeons()
@@ -340,9 +352,10 @@ def scrape_dungeon(doc, n)
   battles = stats[10].content
   gold = stats[13].content
   experience = stats[16].content
-  header = "(#{n}) @{dungeon_name}: #{stamina} stamina, #{battles} battles."
+  header = "(#{n}) #{dungeon_name}: #{stamina} stamina, #{battles} battles."
   header += " #{gold}G." if gold
   header += " #{experience}EXP." if experience
+  header += " #{(1.0 * experience.to_i)/stamina.to_i}E/S." if (gold and experience)
 
   fixed_encounters_header = doc.xpath("//h2").select{|h| h.content == "Major Encounters"}.first
   fixed_encounters_table = fixed_encounters_header.parent.parent.parent.parent
@@ -360,7 +373,8 @@ def scrape_dungeon(doc, n)
     next if boss.parent.children[10].nil?
     techs = boss.parent.children[10].children.map(&:text).select{|t| t.length > 3}
     techs = techs.map{|t| t.gsub(/\s*\(\s*/, "(").gsub(/\s*\)\s*/,")")}
-    text = "#{floor}: #{enemy}: #{hp} HP, #{defense} DEF. #{damage}/#{cd} turns."
+    text = "#{floor}: #{enemy}: #{hp} HP, #{defense} DEF. #{damage}/#{cd} turn"
+    text += cd == 1 ? "." : "s."
     text += " T: #{techs.join(', ')}" if techs.length > 0
     boss_data << text
   end

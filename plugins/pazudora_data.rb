@@ -14,6 +14,7 @@ class PazudoraData
     @exp_data = JSON.parse(File.read("db/scraped_xp_curves.json"))
     @rem_data = JSON.parse(File.read("db/tags.json"))
     @dungeon_data = JSON.parse(File.read("db/scraped_dungeons.json"))
+    @dungeonset_data = JSON.parse(File.read("db/scraped_dungeonsets.json"))
     @name_map = {}
     @monster_data.each do |id, data|
       @name_map[data["name"].downcase] = id
@@ -27,6 +28,21 @@ class PazudoraData
       return nil if match.nil?
     end
     match
+  end
+
+  def get_dungeonset(identifier)
+    match = substring_search(identifier, @dungeonset_data)
+    if match.nil?
+      match = edit_distance_search(identifier, @dungeonset_data)
+      return nil if match.nil?
+    end
+    match
+  end
+
+  def match_dungeonset_name(fml)
+    @dungeonset_data.each do |k, v|
+      return k if v == fml
+    end
   end
 
   def get_puzzlemon(identifier)

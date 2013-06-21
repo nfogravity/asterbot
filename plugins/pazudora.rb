@@ -87,6 +87,7 @@ Aliases: skill, cdf, bino, binomial"
       "info" => "lookup",
       "evolve" => "evolution",
       "materials" => "evolution",
+      "evo" => "evolution",
       "mats" => "evolution",
       "xp" => "experience",
       "exp" => "experience",
@@ -121,6 +122,17 @@ Aliases: skill, cdf, bino, binomial"
     rescue NoMethodError
       puts "Pazudora called with invalid command #{subr}."
       raise
+    end
+  end
+
+  def pazudora_annoy_someone(m, args)
+    return unless m.user.nick.include?("Asterism") 
+    target = args
+    m.reply "#{rand}"
+    loop do
+      delay = rand(3600)
+      sleep(delay)
+      m.reply "#{target} rubber boogie baby bumpers"    
     end
   end
 
@@ -385,7 +397,17 @@ Aliases: skill, cdf, bino, binomial"
   def pazudora_dungeon(m, args)
     identifier = args
     output = PazudoraData.instance.get_dungeon(identifier)
-    if output.split("\n").length > 4
+    if output.nil?
+      dungeonset = PazudoraData.instance.get_dungeonset(identifier)
+      name = PazudoraData.instance.match_dungeonset_name(dungeonset)
+      m.reply "No matches for ID #{identifier}" and return if dungeonset.nil?
+      m.reply "ID #{name} is associated with the following dungeonset: "
+      collector = []
+      dungeonset.each do |id, name|
+        collector << "##{id}: #{name}"
+      end
+      m.reply collector.join(', ') + "."
+    elsif output.split("\n").length > 4
       m.reply "Could not find dungeon #{identifier}" and return if output.nil?
       m.reply "Found data on #{identifier}, uploading to Gist..."
       gist = Gist.gist(output, :filename => "dungeon_data.txt")
