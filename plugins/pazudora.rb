@@ -430,10 +430,8 @@ Aliases: skill, cdf, bino, binomial"
  
       time = "#{event_data[group_num + event_num].text}"
       hour = time.split(" ")[0].oct
-      if (hour == 12) && (time.split(" ")[1] == "am")
-        hour = 0
-      if time.split(" ")[1] == "pm"
-        hour += 12
+      hour = 0 if (hour == 12) && (time.split(" ")[1] == "am")
+      hour += 12 if time.split(" ")[1] == "pm"
       until_event = 60*hour - minutes_since_midnight
        
       if until_event > 0
