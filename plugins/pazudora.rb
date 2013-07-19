@@ -419,7 +419,7 @@ Aliases: skill, cdf, bino, binomial"
     event_data = @daily_page.css(".event3")
     event_rewards = @daily_page.css(".limiteddragon")
     rewards = parse_daily_dungeon_rewards(event_rewards)
-    minutes_since_midnight = ((Time.now.to_i - 8*60*60) % 86400)/60
+    minutes_since_midnight = ((Time.now.to_i - 7*60*60) % 86400)/60
     row_num = 0
  
     loop do
@@ -430,12 +430,12 @@ Aliases: skill, cdf, bino, binomial"
  
       time = "#{event_data[group_num + row_num].text}"
       hour = time.split(" ")[0].oct
-      hour = 0 if (hour == 12) && (time.split(" ")[1] == "am")
+      hour = 0 if (hour == 12)
       hour += 12 if time.split(" ")[1] == "pm"
       until_event = 60*hour - minutes_since_midnight
        
       if until_event > 0
-        m.reply "The next dungeon for Group #{(group_num + 65).chr} is #{rewards[row_num / 5]} at #{time}, in #{until_event / 60}:#{until_event % 60} (#{until_event / 6} stamina)."
+        m.reply "The next dungeon for Group #{(group_num + 65).chr} is #{rewards[row_num / 5]} at #{time}, in #{until_event / 60}:#{until_event % 60} (#{until_event / 10} stamina)."
         return
       end
  
