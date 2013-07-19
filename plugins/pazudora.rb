@@ -398,6 +398,55 @@ Aliases: skill, cdf, bino, binomial"
     end
   end
 
+  def pazudora_when(m, args)
+    daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
+ 
+    username = args.split[0] || m.user.nick
+    friend_code = load_data[username.downcase][:friend_code] rescue nil
+    group_num = friend_code ? group_number_from_friend_code(friend_code) : nil
+ 
+    unless group_num
+      m.reply "Unrecognized user."
+      return
+    end
+ 
+    unless @daily_timestamp == Time.now.strftime("%m-%d-%y")
+      @daily_page = nil
+      @daily_timestamp = Time.now.strftime("%m-%d-%y")
+    end
+ 
+    @daily_page ||= Nokogiri::HTML(open(daily_url))
+    event_data = @daily_page.css(".event3")
+    event_rewards = @daily_page.css(".limiteddragon")
+    rewards = parse_daily_dungeon_rewards(event_rewards)
+    minutes_since_midnight = ((Time.now.to_i - 8*60*60) % 86400)/60
+    row_num = 0
+ 
+    loop do
+      unless event_data[group_num + row_num]
+        m.reply "There are no more timed dungeons for Group #{(group_num + 65).chr} today."
+        return
+      end
+ 
+      time = "#{event_data[group_num + event_num].text}"
+      hour = time.split(" ")[0].oct
+      if (hour == 12) && (time.split(" ")[1] == "am")
+        hour = 0
+      if time.split(" ")[1] == "pm"
+        hour += 12
+      until_event = 60*hour - minutes_since_midnight
+       
+      if until_event > 0
+        m.reply "The next dungeon for Group #{(group_num + 65).chr} is #{rewards[row_num / 5]} at #{time}, in #{until_event / 60}:#{until_event % 60} (#{until_event / 6} stamina)."
+        return
+      end
+ 
+      row_num += 5
+    end
+ 
+    m.reply "Something's gone wrong."
+  end
+
   def enqueue_dailies(channel)
     daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
 
