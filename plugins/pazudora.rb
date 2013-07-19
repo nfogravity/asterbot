@@ -429,7 +429,7 @@ Aliases: skill, cdf, bino, binomial"
       end
  
       time = "#{event_data[group_num + row_num].text}"
-      hour = time.split(" ")[0].oct
+      hour = time.split(" ")[0].to_i
       hour = 0 if (hour == 12)
       hour += 12 if time.split(" ")[1] == "pm"
       until_event = 60*hour - minutes_since_midnight
