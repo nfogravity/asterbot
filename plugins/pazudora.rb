@@ -428,7 +428,7 @@ Aliases: skill, cdf, bino, binomial"
         return
       end
  
-      time = "#{event_data[group_num + event_num].text}"
+      time = "#{event_data[group_num + row_num].text}"
       hour = time.split(" ")[0].oct
       hour = 0 if (hour == 12) && (time.split(" ")[1] == "am")
       hour += 12 if time.split(" ")[1] == "pm"
