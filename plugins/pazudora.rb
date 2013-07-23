@@ -363,87 +363,80 @@ Aliases: skill, cdf, bino, binomial"
   end
 
   def pazudora_dailies(m, args)
-    daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
+		m.reply(get_dailies.join(' '))
+	end
 
-    username = args.split[0] || m.user.nick
-    friend_code = load_data[username.downcase][:friend_code] rescue nil
-    group_num = friend_code ? group_number_from_friend_code(friend_code) : nil
+	
+	def pazudora_settopic(m, args)
+		m.channel.topic = (get_dailies + m.channel.topic.split(' ').drop((m.channel.topic.split(' ').index("||") || -1) + 1)).join(' ')
+	end
+	
+	def get_dailies
+		daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
 
-    unless @daily_timestamp == Time.now.strftime("%m-%d-%y")
-      @daily_page = nil
-      @daily_timestamp = Time.now.strftime("%m-%d-%y")
-    end
+		@daily_page = Nokogiri::HTML(open(daily_url))
+		event_data = @daily_page.css(".event3")
+		event_rewards = @daily_page.css(".limiteddragon")
 
-    @daily_page ||= Nokogiri::HTML(open(daily_url))
-    event_data = @daily_page.css(".event3")
-    event_rewards = @daily_page.css(".limiteddragon")
+		rewards = parse_daily_dungeon_rewards(event_rewards)
 
-    rewards = parse_daily_dungeon_rewards(event_rewards)
-    m.reply "Dungeons today are: #{rewards.join(', ')}"
+		dailies_array = []
+		dailies_array.push(Time.now.strftime "%b %d, %Y")
+		
+		hacky_dailies_number = [rewards.length - 1, 3].min # this is NOT optimal and makes some ugly assumptions
+		
+		(0..hacky_dailies_number).each do |i|
+			dailies_array.push('|')
+			dailies_array.push(rewards[i])
+			(0..4).each do |j|
+				time = "#{event_data[5 * i + j].text}"
+				hour = time.split(" ")[0].to_i
+				hour = 0 if (hour == 12)
+				hour += 12 if time.split(" ")[1] == "pm"
+				dailies_array.push(hour.to_s.rjust(2,'0'))
+			end
+		end
 
-    (0..4).each do |i|
-      group_line = ["Group #{(i + 65).chr}:"]
-      frame = 0
-      loop do
-        break if event_data[i + frame].nil?
-        time = "#{event_data[i + frame].text}".ljust(5)
-        group_line << time
-        frame += 5
-      end
-      m.reply group_line.join(" ")
-    end
-
-    if group_num
-      m.reply "User #{username} is in group #{(group_num + 65).chr}"
-    end
-  end
-
+		dailies_array.push("||")
+		return dailies_array
+	end
+	
   def pazudora_when(m, args)
-    daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
- 
+
     username = args.split[0] || m.user.nick
     friend_code = load_data[username.downcase][:friend_code] rescue nil
     group_num = friend_code ? group_number_from_friend_code(friend_code) : nil
- 
     unless group_num
       m.reply "Unrecognized user."
       return
     end
  
-    unless @daily_timestamp == Time.now.strftime("%m-%d-%y")
-      @daily_page = nil
-      @daily_timestamp = Time.now.strftime("%m-%d-%y")
-    end
- 
-    @daily_page ||= Nokogiri::HTML(open(daily_url))
-    event_data = @daily_page.css(".event3")
-    event_rewards = @daily_page.css(".limiteddragon")
-    rewards = parse_daily_dungeon_rewards(event_rewards)
+	dailies_array = get_dailies
     minutes_since_midnight = ((Time.now.to_i - 7*60*60) % 86400)/60
-    row_num = 0
- 
-    loop do
-      unless event_data[group_num + row_num]
-        m.reply "There are no more timed dungeons for Group #{(group_num + 65).chr} today."
-        return
-      end
- 
-      time = "#{event_data[group_num + row_num].text}"
-      hour = time.split(" ")[0].to_i
-      hour = 0 if (hour == 12)
-      hour += 12 if time.split(" ")[1] == "pm"
-      until_event = 60*hour - minutes_since_midnight
-       
-      if until_event > 0
-        m.reply "The next dungeon for Group #{(group_num + 65).chr} is #{rewards[row_num / 5]} at #{time}, in #{until_event / 60}:#{until_event % 60} (#{until_event / 10} stamina)."
-        return
-      end
- 
-      row_num += 5
-    end
- 
-    m.reply "Something's gone wrong."
+	when_array = [dailies_array[0], "Group", (group_num + 65).chr, dailies_array[1]]
+	i = 2
+    while dailies_array[i]
+		when_array += [dailies_array[i]]
+		until_event = 60*dailies_array[i+group_num+1].to_i - minutes_since_midnight
+		if until_event > 0
+			when_array += ["(in #{until_event / 60}:#{(until_event % 60).to_s.rjust(2,'0')}, #{until_event / 10} stamina)"]
+		elsif until_event > -60
+			when_array += ["(now! for #{until_event+60} minutes)"]
+		else
+			when_array += ["(done)"]
+		end
+		
+		when_array += ["|"]
+		i += 7
+	end
+	
+	when_array.pop
+	m.reply(when_array.join(' '))
   end
+		
+		
+
+
 
   def enqueue_dailies(channel)
     daily_url = PUZZLEMON_BASE_URL + "option.asp?utc=-8"
@@ -826,11 +819,14 @@ Aliases: skill, cdf, bino, binomial"
     return Integer(friend_code.split(",")[0][2]) % 5
   end
 
-  def parse_daily_dungeon_rewards(rewards)
-    puzzlemon_numbers = [
-        rewards[0].children.first.attributes["src"].value.match(/thumbnail\/(\d+).png/)[1],
-        rewards[5].children.first.attributes["src"].value.match(/thumbnail\/(\d+).png/)[1],
-        rewards[10].children.first.attributes["src"].value.match(/thumbnail\/(\d+).png/)[1]]
+def parse_daily_dungeon_rewards(rewards)
+    
+	puzzlemon_numbers = []
+	i = 0
+	while rewards[i] != nil
+		puzzlemon_numbers += [rewards[i].children.first.attributes["src"].value.match(/thumbnail\/(\d+).png/)[1]]
+		i += 5
+	end
 
     puzzlemon_numbers.map{|x|
       get_puzzlemon_info(x).css(".name").children.first.text rescue "Unrecognized Name" }
